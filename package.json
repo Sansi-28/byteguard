@@ -1,0 +1,21 @@
+{
+  "name": "halfbyte-pqc-vault",
+  "version": "2.0.0",
+  "description": "Half Byte — Post-Quantum Secure Research Vault",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "concurrently -n server,client -c blue,green \"node --watch server.js\" \"cd client && npm run dev\"",
+    "build": "cd client && npm run build",
+    "install-all": "npm install && cd client && npm install"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

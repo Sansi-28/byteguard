@@ -32,105 +32,102 @@ export default function Settings() {
     finally { setSaving(false); }
   };
 
-  if (loading) return <div className="loading-state"><div className="loading-spinner" /><p>Loading settings…</p></div>;
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-4">
+      <div className="w-10 h-10 border-3 border-gray-700 border-t-indigo-500 rounded-full animate-spin" />
+      <p>Loading settings…</p>
+    </div>
+  );
 
   return (
-    <div className="page settings-page">
-      <div className="page-header">
-        <h2>⚙️ Settings</h2>
-        <p>Configure encryption parameters and preferences</p>
+    <div>
+      <div className="mb-6">
+        <h2 className="text-xl font-bold text-white">⚙️ Settings</h2>
+        <p className="text-gray-400 text-sm mt-1">Configure encryption parameters and preferences</p>
+        {saving && <span className="text-indigo-400 text-xs mt-1 inline-block animate-pulse">Saving…</span>}
       </div>
 
       {/* Encryption Settings */}
-      <section className="settings-section glass-card">
-        <h3>🔐 Encryption Configuration</h3>
-        <div className="settings-grid">
-          <div className="setting-row">
-            <div className="setting-info">
-              <label>Algorithm</label>
-              <span className="setting-desc">Primary encryption algorithm</span>
-            </div>
-            <select value={settings.algorithm} onChange={e => update({ algorithm: e.target.value })}>
-              <option>AES-256-GCM</option>
-              <option>AES-128-GCM</option>
-              <option>ChaCha20-Poly1305</option>
-            </select>
-          </div>
-          <div className="setting-row">
-            <div className="setting-info">
-              <label>Key Size</label>
-              <span className="setting-desc">Post-quantum key size in bits</span>
-            </div>
-            <select value={settings.keySize} onChange={e => update({ keySize: e.target.value })}>
-              <option value="256">256 bits</option>
-              <option value="512">512 bits</option>
-              <option value="1024">1024 bits</option>
-            </select>
-          </div>
-          <div className="setting-row">
-            <div className="setting-info">
-              <label>Auto-Delete Originals</label>
-              <span className="setting-desc">Remove original after encryption</span>
-            </div>
+      <section className="bg-white/[0.03] backdrop-blur-md border border-white/[0.06] rounded-xl p-5 mb-6">
+        <h3 className="text-white font-semibold mb-4 flex items-center gap-2">🔐 Encryption Configuration</h3>
+        <div className="space-y-4">
+          <SettingRow label="Algorithm" desc="Primary encryption algorithm">
+            <Select value={settings.algorithm} onChange={v => update({ algorithm: v })} options={['AES-256-GCM', 'AES-128-GCM', 'ChaCha20-Poly1305']} />
+          </SettingRow>
+          <SettingRow label="Kyber Key Size" desc="Post-quantum KEM parameter set">
+            <Select value={settings.keySize} onChange={v => update({ keySize: v })} options={[
+              { value: '512', label: 'ML-KEM-512 (128-bit PQ)' },
+              { value: '768', label: 'ML-KEM-768 (192-bit PQ)' },
+              { value: '1024', label: 'ML-KEM-1024 (256-bit PQ)' },
+            ]} />
+          </SettingRow>
+          <SettingRow label="Auto-Delete Originals" desc="Remove plaintext after encryption">
             <ToggleSwitch value={settings.autoDelete} onChange={v => update({ autoDelete: v })} />
-          </div>
+          </SettingRow>
         </div>
       </section>
 
       {/* Security */}
-      <section className="settings-section glass-card">
-        <h3>🛡️ Security</h3>
-        <div className="settings-grid">
-          <div className="setting-row">
-            <div className="setting-info">
-              <label>Session Timeout</label>
-              <span className="setting-desc">Auto-lock after inactivity</span>
-            </div>
-            <select value={settings.sessionTimeout} onChange={e => update({ sessionTimeout: e.target.value })}>
-              <option value="15">15 min</option>
-              <option value="30">30 min</option>
-              <option value="60">60 min</option>
-              <option value="120">120 min</option>
-            </select>
-          </div>
-          <div className="setting-row">
-            <div className="setting-info">
-              <label>Two-Factor Authentication</label>
-              <span className="setting-desc">Require 2FA for login</span>
-            </div>
+      <section className="bg-white/[0.03] backdrop-blur-md border border-white/[0.06] rounded-xl p-5 mb-6">
+        <h3 className="text-white font-semibold mb-4 flex items-center gap-2">🛡️ Security</h3>
+        <div className="space-y-4">
+          <SettingRow label="Session Timeout" desc="Auto-lock after inactivity">
+            <Select value={settings.sessionTimeout} onChange={v => update({ sessionTimeout: v })} options={[
+              { value: '15', label: '15 min' },
+              { value: '30', label: '30 min' },
+              { value: '60', label: '60 min' },
+              { value: '120', label: '120 min' },
+            ]} />
+          </SettingRow>
+          <SettingRow label="Two-Factor Authentication" desc="Require 2FA for login">
             <ToggleSwitch value={settings.twoFactor} onChange={v => update({ twoFactor: v })} />
-          </div>
-          <div className="setting-row">
-            <div className="setting-info">
-              <label>Audit Logging</label>
-              <span className="setting-desc">Log all encryption operations</span>
-            </div>
+          </SettingRow>
+          <SettingRow label="Audit Logging" desc="Log all encryption operations">
             <ToggleSwitch value={settings.auditLogging} onChange={v => update({ auditLogging: v })} />
-          </div>
+          </SettingRow>
         </div>
       </section>
 
       {/* Appearance */}
-      <section className="settings-section glass-card">
-        <h3>🎨 Appearance</h3>
-        <div className="settings-grid">
-          <div className="setting-row">
-            <div className="setting-info">
-              <label>Animations</label>
-              <span className="setting-desc">Enable smooth transitions</span>
-            </div>
+      <section className="bg-white/[0.03] backdrop-blur-md border border-white/[0.06] rounded-xl p-5">
+        <h3 className="text-white font-semibold mb-4 flex items-center gap-2">🎨 Appearance</h3>
+        <div className="space-y-4">
+          <SettingRow label="Animations" desc="Enable smooth transitions">
             <ToggleSwitch value={settings.animations} onChange={v => update({ animations: v })} />
-          </div>
-          <div className="setting-row">
-            <div className="setting-info">
-              <label>High Contrast</label>
-              <span className="setting-desc">Enhanced visibility mode</span>
-            </div>
+          </SettingRow>
+          <SettingRow label="High Contrast" desc="Enhanced visibility mode">
             <ToggleSwitch value={settings.highContrast} onChange={v => update({ highContrast: v })} />
-          </div>
+          </SettingRow>
         </div>
       </section>
     </div>
+  );
+}
+
+/* ---------- Sub-components ---------- */
+
+function SettingRow({ label, desc, children }) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-2 border-b border-white/[0.04] last:border-0">
+      <div>
+        <label className="text-white text-sm font-medium">{label}</label>
+        <span className="block text-gray-500 text-xs mt-0.5">{desc}</span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function Select({ value, onChange, options }) {
+  const opts = options.map(o => typeof o === 'string' ? { value: o, label: o } : o);
+  return (
+    <select
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      className="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:border-indigo-500"
+    >
+      {opts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
   );
 }
 
@@ -138,12 +135,12 @@ function ToggleSwitch({ value, onChange }) {
   return (
     <button
       type="button"
-      className={`toggle-switch ${value ? 'on' : 'off'}`}
-      onClick={() => onChange(!value)}
       role="switch"
       aria-checked={value}
+      onClick={() => onChange(!value)}
+      className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${value ? 'bg-indigo-600' : 'bg-gray-700'}`}
     >
-      <span className="toggle-thumb" />
+      <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${value ? 'translate-x-5' : ''}`} />
     </button>
   );
 }

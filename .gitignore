@@ -1,5 +1,14 @@
 node_modules/
 data/
+storage/
 .env
 *.log
 client/dist/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/

@@ -1,7 +1,7 @@
 {
-  "name": "halfbyte-client",
+  "name": "byteguard-client",
   "private": true,
-  "version": "2.0.0",
+  "version": "3.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,12 +9,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "crystals-kyber-js": "^1.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.0"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.3",
     "@vitejs/plugin-react": "^4.3.4",
+    "tailwindcss": "^4.1.3",
     "vite": "^5.4.11"
   }
 }

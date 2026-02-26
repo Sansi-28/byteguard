@@ -41,10 +41,12 @@ def create_app(config_class=Config):
     from routes.auth_routes import auth_bp
     from routes.files_routes import files_bp
     from routes.settings_routes import settings_bp
+    from routes.group_routes import groups_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(files_bp, url_prefix='/api/files')
     app.register_blueprint(settings_bp, url_prefix='/api/settings')
+    app.register_blueprint(groups_bp, url_prefix='/api/groups')
 
     # Health check
     @app.route('/api/health')

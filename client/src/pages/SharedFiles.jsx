@@ -67,7 +67,7 @@ export default function SharedFiles() {
                 <span className="text-2xl">📄</span>
                 <div className="min-w-0 flex-1">
                   <strong className="text-white text-sm block truncate">{item.fileName}</strong>
-                  <span className="text-gray-500 text-xs">To: {item.recipient}</span>
+                  <span className="text-gray-500 text-xs">To: {item.recipientName || item.recipient}</span>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 mb-3">
@@ -81,7 +81,7 @@ export default function SharedFiles() {
                 </button>
               </div>
               <div className="flex items-center justify-between pt-3 border-t border-white/[0.04]">
-                <span className="text-gray-500 text-xs">{new Date(item.timestamp).toLocaleDateString()}</span>
+                <span className="text-gray-500 text-xs">{new Date(item.createdAt || item.timestamp).toLocaleDateString()}</span>
                 <button className="px-3 py-1 text-xs bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg hover:bg-red-500/20 transition" onClick={() => revoke(item.id)}>
                   Revoke
                 </button>

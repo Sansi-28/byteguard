@@ -130,6 +130,86 @@ class FileHistory(db.Model):
         }
 
 
+class Group(db.Model):
+    __tablename__ = 'groups'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, default='')
+    owner_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    owner = db.relationship('User', backref='owned_groups', foreign_keys=[owner_id])
+    members = db.relationship('GroupMembership', backref='group', lazy='dynamic',
+                              cascade='all, delete-orphan')
+    file_access = db.relationship('GroupFileAccess', backref='group', lazy='dynamic',
+                                  cascade='all, delete-orphan')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'ownerId': self.owner_id,
+            'ownerName': self.owner.researcher_id if self.owner else None,
+            'memberCount': self.members.count(),
+            'createdAt': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class GroupMembership(db.Model):
+    __tablename__ = 'group_memberships'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('groups.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    role = db.Column(db.String(20), default='member')  # admin / member
+    joined_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship('User', backref='group_memberships')
+
+    __table_args__ = (db.UniqueConstraint('group_id', 'user_id', name='uq_group_user'),)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'groupId': self.group_id,
+            'userId': self.user_id,
+            'researcherId': self.user.researcher_id if self.user else None,
+            'hasKyberKey': self.user.kyber_public_key is not None if self.user else False,
+            'role': self.role,
+            'joinedAt': self.joined_at.isoformat() if self.joined_at else None,
+        }
+
+
+class GroupFileAccess(db.Model):
+    __tablename__ = 'group_file_access'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    file_id = db.Column(db.Integer, db.ForeignKey('file_metadata.id'), nullable=False, index=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('groups.id'), nullable=False, index=True)
+    shared_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    kem_ciphertexts = db.Column(db.Text, nullable=False)  # JSON: { "userId": "base64_kem_ct", ... }
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    file = db.relationship('FileMetadata', backref='group_accesses')
+    sharer = db.relationship('User', foreign_keys=[shared_by])
+
+    __table_args__ = (db.UniqueConstraint('file_id', 'group_id', name='uq_file_group'),)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'fileId': self.file_id,
+            'fileName': self.file.file_name if self.file else None,
+            'groupId': self.group_id,
+            'groupName': self.group.name if self.group else None,
+            'sharedBy': self.sharer.researcher_id if self.sharer else None,
+            'kemCiphertexts': self.kem_ciphertexts,
+            'createdAt': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
 class UserSettings(db.Model):
     __tablename__ = 'user_settings'
 

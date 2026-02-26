@@ -91,6 +91,19 @@ def upload_file():
     return jsonify(meta.to_dict()), 201
 
 
+# ── List my files (owned) ──────────────────────────────────
+
+@files_bp.route('/my-files', methods=['GET'])
+@jwt_required()
+def my_files():
+    """Return all files owned by the current user."""
+    user_id = int(get_jwt_identity())
+    files = FileMetadata.query.filter_by(owner_id=user_id).order_by(
+        FileMetadata.created_at.desc()
+    ).all()
+    return jsonify([f.to_dict() for f in files])
+
+
 # ── Download encrypted file ───────────────────────────────
 
 @files_bp.route('/download/<int:file_id>', methods=['GET'])
@@ -105,24 +118,111 @@ def download_file(file_id):
     if not meta:
         return jsonify({'error': 'File not found'}), 404
 
-    # Authorization: owner or valid share
+    # Authorization: owner, valid share, or group access
     if meta.owner_id != user_id:
         share = SharedAccess.query.filter_by(
             file_id=file_id, recipient_id=user_id
         ).first()
+        group_access = None
         if not share:
+            from models import GroupFileAccess, GroupMembership
+            group_access = db.session.query(GroupFileAccess).join(
+                GroupMembership, GroupFileAccess.group_id == GroupMembership.group_id
+            ).filter(
+                GroupFileAccess.file_id == file_id,
+                GroupMembership.user_id == user_id
+            ).first()
+        if not share and not group_access:
             return jsonify({'error': 'Access denied'}), 403
 
     full_path = os.path.join(_storage_dir(), meta.storage_path)
     if not os.path.exists(full_path):
         return jsonify({'error': 'File blob not found on storage'}), 404
 
-    return send_file(
+    response = send_file(
         full_path,
         mimetype='application/octet-stream',
         as_attachment=True,
         download_name=meta.file_name + '.enc'
     )
+    response.headers['Content-Type'] = 'application/octet-stream'
+    response.headers['Content-Disposition'] = f'attachment; filename="{meta.file_name}.enc"'
+    response.headers['X-Original-Filename'] = meta.file_name
+    response.headers['X-Content-Type'] = meta.content_type
+    response.headers['X-Original-Size'] = str(meta.original_size)
+    response.headers['Access-Control-Expose-Headers'] = 'Content-Disposition, X-Original-Filename, X-Content-Type, X-Original-Size'
+    return response
+
+
+# ── View file inline (PDF integration) ────────────────────
+
+@files_bp.route('/view/<int:file_id>', methods=['GET'])
+@jwt_required()
+def view_file(file_id):
+    """
+    Stream the encrypted file blob for in-app viewing.
+    The client decrypts in-browser and renders inline (e.g. PDF.js).
+    Returns the raw encrypted blob with original content-type metadata in headers.
+    """
+    user_id = int(get_jwt_identity())
+    meta = FileMetadata.query.get(file_id)
+    if not meta:
+        return jsonify({'error': 'File not found'}), 404
+
+    # Authorization: owner or valid share
+    if meta.owner_id != user_id:
+        share = SharedAccess.query.filter_by(
+            file_id=file_id, recipient_id=user_id
+        ).first()
+        # Also check group access
+        group_access = None
+        if not share:
+            from models import GroupFileAccess, GroupMembership
+            group_access = db.session.query(GroupFileAccess).join(
+                GroupMembership, GroupFileAccess.group_id == GroupMembership.group_id
+            ).filter(
+                GroupFileAccess.file_id == file_id,
+                GroupMembership.user_id == user_id
+            ).first()
+        if not share and not group_access:
+            return jsonify({'error': 'Access denied'}), 403
+
+    full_path = os.path.join(_storage_dir(), meta.storage_path)
+    if not os.path.exists(full_path):
+        return jsonify({'error': 'File blob not found on storage'}), 404
+
+    response = send_file(
+        full_path,
+        mimetype='application/octet-stream',
+    )
+    response.headers['Content-Type'] = 'application/octet-stream'
+    response.headers['X-Original-Filename'] = meta.file_name
+    response.headers['X-Content-Type'] = meta.content_type
+    response.headers['X-Original-Size'] = str(meta.original_size)
+    response.headers['X-IV'] = meta.iv or ''
+    response.headers['Access-Control-Expose-Headers'] = 'X-Original-Filename, X-Content-Type, X-Original-Size, X-IV'
+    return response
+
+
+# ── File metadata by ID ───────────────────────────────────
+
+@files_bp.route('/<int:file_id>/meta', methods=['GET'])
+@jwt_required()
+def file_meta(file_id):
+    """Get metadata for a single file."""
+    user_id = int(get_jwt_identity())
+    meta = FileMetadata.query.get(file_id)
+    if not meta:
+        return jsonify({'error': 'File not found'}), 404
+    if meta.owner_id != user_id:
+        share = SharedAccess.query.filter_by(
+            file_id=file_id, recipient_id=user_id
+        ).first()
+        if not share:
+            return jsonify({'error': 'Access denied'}), 403
+    result = meta.to_dict()
+    result['iv'] = meta.iv
+    return jsonify(result)
 
 
 # ── Share file with KEM ciphertext ────────────────────────

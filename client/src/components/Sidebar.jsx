@@ -7,6 +7,7 @@ const navItems = [
   { to: '/history', icon: '📋', label: 'File History' },
   { to: '/shared', icon: '📤', label: 'Shared Files' },
   { to: '/received', icon: '📥', label: 'Received Files' },
+  { to: '/groups', icon: '👥', label: 'Groups' },
   { to: '/access', icon: '🔑', label: 'Access Control' },
   { to: '/settings', icon: '⚙️', label: 'Settings' },
 ];

@@ -5,12 +5,13 @@ import api from '../api/client';
 export default function AccessControl() {
   const [shared, setShared] = useState([]);
   const [received, setReceived] = useState([]);
+  const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const { showToast } = useToast();
 
   useEffect(() => {
-    Promise.all([api.getShared(), api.getReceived()])
-      .then(([s, r]) => { setShared(s); setReceived(r); })
+    Promise.all([api.getShared(), api.getReceived(), api.listGroups()])
+      .then(([s, r, g]) => { setShared(s); setReceived(r); setGroups(g); })
       .catch(() => showToast('Failed to load data', 'error'))
       .finally(() => setLoading(false));
   }, []);
@@ -43,12 +44,13 @@ export default function AccessControl() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         {[
           { label: 'Active Shares', value: shared.length, color: 'indigo' },
           { label: 'Received', value: received.length, color: 'emerald' },
+          { label: 'Groups', value: groups.length, color: 'violet' },
           { label: 'Unread', value: received.filter(r => !r.viewed).length, color: 'amber' },
-          { label: 'Security', value: 'PQC', color: 'violet' },
+          { label: 'Security', value: 'PQC', color: 'indigo' },
         ].map(s => (
           <div key={s.label} className="bg-white/[0.03] backdrop-blur-md border border-white/[0.06] rounded-xl p-4 text-center">
             <span className="block text-gray-500 text-xs uppercase tracking-wider mb-1">{s.label}</span>
@@ -77,7 +79,7 @@ export default function AccessControl() {
                 {shared.map(s => (
                   <tr key={s.id} className="hover:bg-white/[0.02]">
                     <td className="px-3 py-2 border-b border-gray-800 max-w-[160px] truncate text-white">{s.fileName}</td>
-                    <td className="px-3 py-2 border-b border-gray-800 text-gray-400">{s.recipient}</td>
+                    <td className="px-3 py-2 border-b border-gray-800 text-gray-400">{s.recipientName || s.recipient}</td>
                     <td className="px-3 py-2 border-b border-gray-800 hidden md:table-cell">
                       <button className="font-mono text-xs text-emerald-400 hover:underline" onClick={() => copyCode(s.shareCode)}>
                         {s.shareCode}

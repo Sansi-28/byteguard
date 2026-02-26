@@ -20,7 +20,7 @@ The server **never** sees your plaintext files or encryption keys. Ever.
 - **Receive & decrypt** shared files using your locally-stored private key
 - **Track everything** — full encryption history with CSV export
 - **Manage access** — revoke individual or group file access at any time
-- **Dark glassmorphism UI** — modern, accessible interface with smooth animations
+- **Light & dark theme** — modern, accessible interface with smooth animations and CSS custom-property design tokens
 - Zero-trust architecture: the server stores only ciphertext blobs
 
 ![Dashboard](./screenshots/dashboard.png)
@@ -35,16 +35,18 @@ This isn't a toy. Here's the actual pipeline:
 ### Encrypting a File
 1. Browser generates a random **AES-256-GCM** key via WebCrypto
 2. File is encrypted with that key (12-byte IV, 128-bit auth tag)
-3. The encrypted blob (`IV || ciphertext`) is uploaded to the server
-4. SHA-256 fingerprint is computed for integrity verification
-5. Server stores the blob — it has no idea what's inside
+3. The AES key is **Kyber-KEM-wrapped with the owner's own public key** and stored alongside the file metadata (`ownerKemCt`), so the owner can recover it later for sharing
+4. The encrypted blob (`IV || ciphertext`) is uploaded to the server
+5. SHA-256 fingerprint is computed for integrity verification
+6. Server stores the blob and the owner's KEM ciphertext — it has no idea what's inside
 
 ### Sharing with Someone
-1. Sender looks up the recipient's **Kyber-512 public key** from the server
-2. A Kyber KEM encapsulation produces a `kemCiphertext` + `sharedSecret`
-3. The AES key is XOR-wrapped with the `sharedSecret` → `wrappedKey`
-4. `kemCiphertext + wrappedKey` are sent to the server alongside the share metadata
-5. Recipient gets a **share code** to claim the file
+1. Sender **unwraps their own `ownerKemCt`** using their Kyber private key to recover the original AES key
+2. Sender looks up the recipient's **Kyber-512 public key** from the server
+3. A Kyber KEM encapsulation produces a `kemCiphertext` + `sharedSecret`
+4. The **same** AES key is XOR-wrapped with the `sharedSecret` → `wrappedKey`
+5. `kemCiphertext + wrappedKey` are sent to the server alongside the share metadata
+6. Recipient gets a **share code** to claim the file
 
 ### Receiving & Decrypting
 1. Recipient enters the share code (or views a group-shared file)
@@ -56,9 +58,9 @@ This isn't a toy. Here's the actual pipeline:
 
 ### Sharing with a Group
 1. Group owner/admin shares a file with the group
-2. Browser fetches all group members' Kyber-512 public keys
-3. Fresh AES key is generated and the file is encrypted
-4. AES key is individually encapsulated for each member → per-user KEM ciphertexts
+2. Browser **unwraps `ownerKemCt`** to recover the original AES key
+3. Browser fetches all group members' Kyber-512 public keys
+4. The **same** AES key is individually encapsulated for each member → per-user KEM ciphertexts
 5. All KEM ciphertexts stored as JSON on server: `{"userId": "kemPayload", ...}`
 6. Any group member can decrypt using their own private key + their KEM ciphertext
 
@@ -165,7 +167,7 @@ byteguard/
 │   │   │       ├── ShareModal.jsx    # Share with individual
 │   │   │       ├── ReceiveModal.jsx  # Receive via share code
 │   │   │       └── ProfileModal.jsx  # User profile
-│   │   ├── context/            # AuthContext (Kyber keygen), ToastContext
+│   │   ├── context/            # AuthContext (Kyber keygen), ToastContext, ThemeContext
 │   │   └── pages/              # Encryption, History, Shared, Received, Groups, etc.
 │   │       ├── Encryption.jsx      # File encryption lab
 │   │       ├── History.jsx         # Encryption history log
@@ -277,7 +279,7 @@ The attacker gets encrypted blobs and Kyber public keys. Without private keys (w
 Absolutely. Clone it, `docker-compose up`, done.
 
 **How does group file sharing work?**
-When you share a file with a group, the client generates a fresh AES key, encrypts the file, then individually encapsulates that AES key for each group member's Kyber public key. The server stores all the per-member KEM ciphertexts as JSON. Each member can decrypt using only their own private key.
+When you share a file with a group, the client recovers the original AES key from your owner KEM ciphertext, then individually re-encapsulates that same AES key for each group member's Kyber public key. The server stores all the per-member KEM ciphertexts as JSON. Each member can decrypt using only their own private key.
 
 **Can I view files without downloading?**
 Yes! The new FileViewer component decrypts files client-side and renders PDFs, images, and text files inline. The server never sees the plaintext — decryption happens entirely in your browser.

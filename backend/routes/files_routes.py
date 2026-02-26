@@ -42,6 +42,7 @@ def upload_file():
     iv = request.form.get('iv', '')
     sha256_hash = request.form.get('sha256Hash', '')
     content_type = request.form.get('contentType', 'application/octet-stream')
+    owner_kem_ct = request.form.get('ownerKemCt', '')
 
     # Generate unique storage path
     file_uuid = uuid.uuid4().hex
@@ -73,6 +74,7 @@ def upload_file():
         content_type=content_type,
         sha256_hash=sha256_hash,
         iv=iv,
+        owner_kem_ct=owner_kem_ct or None,
     )
     db.session.add(meta)
 
@@ -222,6 +224,9 @@ def file_meta(file_id):
             return jsonify({'error': 'Access denied'}), 403
     result = meta.to_dict()
     result['iv'] = meta.iv
+    # Only expose the owner's wrapped AES key to the file owner
+    if meta.owner_id == user_id:
+        result['ownerKemCt'] = meta.owner_kem_ct
     return jsonify(result)
 
 
@@ -408,4 +413,9 @@ def list_my_files():
     files = FileMetadata.query.filter_by(owner_id=user_id).order_by(
         FileMetadata.created_at.desc()
     ).all()
-    return jsonify([f.to_dict() for f in files])
+    result = []
+    for f in files:
+        d = f.to_dict()
+        d['ownerKemCt'] = f.owner_kem_ct   # include owner's wrapped AES key
+        result.append(d)
+    return jsonify(result)

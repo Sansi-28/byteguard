@@ -53,6 +53,7 @@ class FileMetadata(db.Model):
     content_type = db.Column(db.String(128), default='application/octet-stream')
     sha256_hash = db.Column(db.String(64), nullable=True)
     iv = db.Column(db.String(64), nullable=True)  # base64-encoded IV used for AES-GCM
+    owner_kem_ct = db.Column(db.Text, nullable=True)  # owner's KEM-wrapped AES key (base64)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationships
@@ -68,6 +69,8 @@ class FileMetadata(db.Model):
             'encryptedSize': self.encrypted_size,
             'contentType': self.content_type,
             'sha256Hash': self.sha256_hash,
+            'iv': self.iv,
+            'ownerKemCt': self.owner_kem_ct,
             'createdAt': self.created_at.isoformat() if self.created_at else None,
         }
 
@@ -93,6 +96,7 @@ class SharedAccess(db.Model):
             'id': self.id,
             'fileId': self.file_id,
             'fileName': self.file.file_name if self.file else None,
+            'contentType': self.file.content_type if self.file else None,
             'senderId': self.sender_id,
             'senderName': self.sender.researcher_id if self.sender else None,
             'recipientId': self.recipient_id,
